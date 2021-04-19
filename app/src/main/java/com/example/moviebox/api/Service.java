@@ -1,14 +1,14 @@
-package com.example.moviebox;
+package com.example.moviebox.api;
 
 
-import java.util.List;
+import com.example.moviebox.model.MovieResults;
 
 import retrofit2.Call;
 import retrofit2.http.GET;
 import retrofit2.http.Path;
 import retrofit2.http.Query;
 
-public interface ApiCaller {
+public interface Service {
 
 
     @GET("/3/movie/{category}")

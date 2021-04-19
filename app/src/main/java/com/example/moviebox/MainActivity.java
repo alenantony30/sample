@@ -10,9 +10,7 @@ import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
-import android.content.Intent;
 import android.os.Bundle;
-import android.os.Parcel;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -22,6 +20,10 @@ import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
+import com.example.moviebox.adapter.PopularMovieAdapter;
+import com.example.moviebox.api.Client;
+import com.example.moviebox.api.Service;
+import com.example.moviebox.model.MovieResults;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -45,7 +47,7 @@ public class MainActivity extends AppCompatActivity {
 
     List<MovieResults.ResultsBean> listOfMovies=new ArrayList<>();
 
-    public static String BASE_URL="https://api.themoviedb.org";
+
     public static  String API_KEY="f847336cfad8c531603d08281a375f21";
     public static String LANGUAGE="en-US";
     public static String  PAGE="1";
@@ -115,11 +117,9 @@ public class MainActivity extends AppCompatActivity {
 
     public void getDataFromTheMovieDB(String category,String page){
 
-        Retrofit retrofit=new Retrofit.Builder()
-                .baseUrl(BASE_URL)
-                .addConverterFactory(GsonConverterFactory.create())
-                .build();
-        ApiCaller myInterface=retrofit.create(ApiCaller.class);
+
+        Retrofit retrofit= Client.getClient();
+        Service myInterface=retrofit.create(Service.class);
         Call<MovieResults>call=myInterface.listOfNowPlaying(category,API_KEY,LANGUAGE,page);
         call.enqueue(new Callback<MovieResults>() {
             @Override
