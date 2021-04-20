@@ -1,4 +1,4 @@
-package com.example.moviebox.api;
+package com.example.moviebox.request;
 
 
 import com.example.moviebox.model.MovieResults;
@@ -8,7 +8,7 @@ import retrofit2.http.GET;
 import retrofit2.http.Path;
 import retrofit2.http.Query;
 
-public interface Service {
+public interface MovieApi {
 
 
     @GET("/3/movie/{category}")

@@ -2,13 +2,9 @@
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.widget.NestedScrollView;
+import androidx.lifecycle.ViewModelProviders;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
-import retrofit2.Retrofit;
-import retrofit2.converter.gson.GsonConverterFactory;
 
 import android.os.Bundle;
 import android.util.Log;
@@ -21,14 +17,15 @@ import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
 import com.example.moviebox.adapter.PopularMovieAdapter;
-import com.example.moviebox.api.Client;
-import com.example.moviebox.api.Service;
 import com.example.moviebox.model.MovieResults;
+import com.example.moviebox.viewmodel.NowPlayingMoviesViewModel;
+import com.example.moviebox.viewmodel.PopularMoviesViewModel;
+
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity {
+ public class MainActivity extends AppCompatActivity {
     //now playing
     // https://api.themoviedb.org/3/movie/now_playing?language=en-US&page=undefined&api_key=f847336cfad8c531603d08281a375f21
 
@@ -38,17 +35,24 @@ public class MainActivity extends AppCompatActivity {
     //image
     //https://image.tmdb.org/t/p/w500/
 
+
+
     RecyclerView recyclerView;
     PopularMovieAdapter popularMovieAdapter;
     NestedScrollView nestedScrollView;
     ProgressBar progressBar;
 
+    NowPlayingMoviesViewModel nowPlayingMoviesViewModel;
+    PopularMoviesViewModel popularMoviesViewModel;
 
 
-    List<MovieResults.ResultsBean> listOfMovies=new ArrayList<>();
+
+     List<MovieResults.ResultsBean> listOfMovies=new ArrayList<MovieResults.ResultsBean>();
+     //List<MovieResults.ResultsBean> listOfNowPlaying=new ArrayList<MovieResults.ResultsBean>();
 
 
-    public static  String API_KEY="f847336cfad8c531603d08281a375f21";
+
+
     public static String LANGUAGE="en-US";
     public static String  PAGE="1";
     public static String CATEGORY1="now_playing";
@@ -63,9 +67,12 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         PAGE="1";
+        getPopularMovies();
+        getNowPlayingMovies();
+
     }
 
-    @Override
+     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
@@ -78,8 +85,6 @@ public class MainActivity extends AppCompatActivity {
         nestedScrollView=findViewById(R.id.nestedScrollView);
         progressBar=findViewById(R.id.progressBar3);
 
-
-
         nowPlayingMovies=findViewById(R.id.now_playing_movies_linear_layout);
         inflater=LayoutInflater.from(this);
 
@@ -87,21 +92,18 @@ public class MainActivity extends AppCompatActivity {
         recyclerView.setLayoutManager(new LinearLayoutManager(MainActivity.this));
         recyclerView.setAdapter(popularMovieAdapter);
 
-        getDataFromTheMovieDB(CATEGORY1,"undefined");
-        getDataFromTheMovieDB(CATEGORY2,"1");
 
-     // Toast.makeText(this,LIMIT, Toast.LENGTH_SHORT).show();
 
         nestedScrollView.setOnScrollChangeListener(new NestedScrollView.OnScrollChangeListener() {
             @Override
             public void onScrollChange(NestedScrollView v, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {
                 if(scrollY==v.getChildAt(0).getMeasuredHeight()-v.getMeasuredHeight()){
-                 //   Toast.makeText(MainActivity.this, "end of list", Toast.LENGTH_SHORT).show();
+                    //   Toast.makeText(MainActivity.this, "end of list", Toast.LENGTH_SHORT).show();
                     pageIncremented=Integer.parseInt(PAGE)+1;
                     if(pageIncremented<= Integer.parseInt(LIMIT)) {
                         PAGE = String.valueOf(pageIncremented);
                         // Toast.makeText(MainActivity.this, PAGE, Toast.LENGTH_SHORT).show();
-                        getDataFromTheMovieDB(CATEGORY2, PAGE);
+                        getPopularMovies();
                     }
                     else{
                         progressBar.setVisibility(View.GONE);
@@ -115,78 +117,55 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    public void getDataFromTheMovieDB(String category,String page){
+   public void getNowPlayingMovies(){
+
+       nowPlayingMoviesViewModel= ViewModelProviders.of(this).get(NowPlayingMoviesViewModel.class);
+       nowPlayingMoviesViewModel.init();
+       nowPlayingMoviesViewModel.getMoviesRepository().observe(this, movieResponse -> {
+           List<MovieResults.ResultsBean> movieResults = movieResponse.getResults();
+
+           if(movieResults.size()>0) {
+
+               for (int i = 0; i < movieResults.size(); i++) {
+
+                   View view = inflater.inflate(R.layout.now_playing_item, nowPlayingMovies, false);
+                   ImageView imageView = view.findViewById(R.id.nowPlayingMovieImage);
+                   Glide.with(MainActivity.this)
+                           .load("https://image.tmdb.org/t/p/w500/" + movieResults.get(i).getPoster_path())
+                           .into(imageView);
+                   nowPlayingMovies.addView(view);
+                   // Log.i("now",movies.get(i).getTitle()+"\n");
+               }
+           }
+
+       });
+       
+    }
+    
+    public void getPopularMovies(){
 
 
-        Retrofit retrofit= Client.getClient();
-        Service myInterface=retrofit.create(Service.class);
-        Call<MovieResults>call=myInterface.listOfNowPlaying(category,API_KEY,LANGUAGE,page);
-        call.enqueue(new Callback<MovieResults>() {
-            @Override
-            public void onResponse(Call<MovieResults> call, Response<MovieResults> response) {
+        popularMoviesViewModel= ViewModelProviders.of(this).get(PopularMoviesViewModel.class);
+        popularMoviesViewModel.init();
+        popularMoviesViewModel.getMoviesRepository().observe(this, movieResponse -> {
 
-                if(response.isSuccessful()&&response!=null) {
+            LIMIT=movieResponse.getTotal_pages()+"";
+          //  Toast.makeText(this, LIMIT, Toast.LENGTH_SHORT).show();
 
-                    MovieResults results = response.body();
+            List<MovieResults.ResultsBean> movieResults = movieResponse.getResults();
 
-                    LIMIT=results.getTotal_pages()+"";
-                    List<MovieResults.ResultsBean> movies = results.getResults();
 
-                    Log.i("pop", category + " " + page);
-                    if (category == CATEGORY1)
-                        nowShowingMovies(movies);
-                    if (category == CATEGORY2)
-                        popularMovies(movies);
+            if(movieResults.size()>0) {
+
+                for (int i = 0; i < movieResults.size(); i++) {
+                    listOfMovies.add(movieResults.get(i));
+                    // Log.i("pop",movies.get(i).getTitle());
                 }
-                else
-                {
-                    Log.i("error",response.code()+"");
-                }
-
-
+                popularMovieAdapter.notifyDataSetChanged();
 
             }
 
-            @Override
-            public void onFailure(Call<MovieResults> call, Throwable t) {
-                t.printStackTrace();
-
-            }
         });
-
     }
-
-    private void popularMovies(List<MovieResults.ResultsBean> movies) {
-
-        Log.i("pop",movies.size()+" ");
-        if(movies.size()>0) {
-
-            for (int i = 0; i < movies.size(); i++) {
-                listOfMovies.add(movies.get(i));
-               // Log.i("pop",movies.get(i).getTitle());
-            }
-            popularMovieAdapter.notifyDataSetChanged();
-
-        }
-    }
-
-    private void nowShowingMovies(List<MovieResults.ResultsBean> movies) {
-        //popularMoviesList=movies;
-        if(movies.size()>0) {
-
-            for (int i = 0; i < movies.size(); i++) {
-
-                View view = inflater.inflate(R.layout.now_playing_item, nowPlayingMovies, false);
-                ImageView imageView = view.findViewById(R.id.nowPlayingMovieImage);
-                Glide.with(MainActivity.this)
-                        .load("https://image.tmdb.org/t/p/w500/" + movies.get(i).getPoster_path())
-                        .into(imageView);
-                nowPlayingMovies.addView(view);
-               // Log.i("now",movies.get(i).getTitle()+"\n");
-            }
-        }
-
-    }
-
 
 }
